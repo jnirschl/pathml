@@ -29,8 +29,9 @@ class Tiles:
         # if tiles are supplied, add them to the h5manager
         if tiles:
             assert isinstance(tiles, list) and all(
-                [isinstance(tile, pathml.core.Tile) for tile in tiles]
+                isinstance(tile, pathml.core.Tile) for tile in tiles
             ), f"tiles are of type {reprlib.repr([type(t) for t in tiles])} but must all be pathml.core.Tile"
+
 
             tiledictionary = {}
             for tile in tiles:
@@ -39,7 +40,7 @@ class Tiles:
                         f"Tiles expects a list of type Tile but was given {type(tile)}"
                     )
                 if tile.coords is None:
-                    raise ValueError(f"tiles must contain valid coords")
+                    raise ValueError("tiles must contain valid coords")
                 coords = tile.coords
                 tiledictionary[coords] = tile
             self._tiles = OrderedDict(tiledictionary)
@@ -58,8 +59,7 @@ class Tiles:
         return list(self.h5manager.h5["tiles"].keys())
 
     def __repr__(self):
-        rep = f"{len(self.h5manager.h5['tiles'])} tiles: {reprlib.repr(list(self.h5manager.h5['tiles'].keys()))}"
-        return rep
+        return f"{len(self.h5manager.h5['tiles'])} tiles: {reprlib.repr(list(self.h5manager.h5['tiles'].keys()))}"
 
     def __len__(self):
         return len(self.h5manager.h5["tiles"].keys())

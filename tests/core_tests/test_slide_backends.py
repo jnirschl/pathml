@@ -78,7 +78,7 @@ def test_extract_region_openslide(example_slide_data, shape):
     for tile in example_slide_data.generate_tiles(shape=shape):
         i, j = tile.coords
         assert np.array_equal(tile.image, raw_im_array[i : i + h, j : j + w, :])
-        assert tile.image.shape[0:2] == shape
+        assert tile.image.shape[:2] == shape
 
 
 def test_extract_region_levels_openslide():
@@ -136,7 +136,7 @@ def test_tile_generator(backend, shape, tile_shape, pad):
         assert len(tiles) == np.prod(
             [1 + (shape[i] // tile_shape[i]) for i in range(len(shape))]
         )
-    assert all([isinstance(tile, Tile) for tile in tiles])
+    assert all(isinstance(tile, Tile) for tile in tiles)
 
 
 @pytest.mark.parametrize("backend", [BioFormatsBackend, OpenSlideBackend])
@@ -167,7 +167,7 @@ def test_tile_generator_with_level(backend, shape, tile_shape, pad, level):
         assert len(tiles) == np.prod(
             [1 + (shape[i] // tile_shape[i]) for i in range(len(shape))]
         )
-    assert all([isinstance(tile, Tile) for tile in tiles])
+    assert all(isinstance(tile, Tile) for tile in tiles)
 
 
 @pytest.mark.parametrize("backend", [bioformats_backend(), bioformats_backend_qptiff()])

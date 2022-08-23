@@ -33,12 +33,11 @@ def download_from_url(url, download_dir, name=None):
 
     if os.path.exists(path):
         return
-    else:
-        os.makedirs(download_dir, exist_ok=True)
+    os.makedirs(download_dir, exist_ok=True)
 
-        # Download the file from `url` and save it locally under `file_name`:
-        with urllib.request.urlopen(url) as response, open(path, "wb") as out_file:
-            shutil.copyfileobj(response, out_file)
+    # Download the file from `url` and save it locally under `file_name`:
+    with urllib.request.urlopen(url) as response, open(path, "wb") as out_file:
+        shutil.copyfileobj(response, out_file)
 
 
 def parse_file_size(fs):
@@ -74,8 +73,7 @@ def pil_to_rgb(image_array_pil):
     Convert PIL RGBA Image to numpy RGB array
     """
     image_array_rgba = np.asarray(image_array_pil)
-    image_array = cv2.cvtColor(image_array_rgba, cv2.COLOR_RGBA2RGB).astype(np.uint8)
-    return image_array
+    return cv2.cvtColor(image_array_rgba, cv2.COLOR_RGBA2RGB).astype(np.uint8)
 
 
 def segmentation_lines(mask_in):
@@ -248,8 +246,7 @@ def RGB_to_HSI(imarr):
     s = 1 - 3 * np.amin(patch_norm, axis=2)
     patchsum = np.sum(imarr, axis=2)
     i = patchsum / (3 * 255)
-    out = np.stack([h, s, i], axis=2)
-    return out
+    return np.stack([h, s, i], axis=2)
 
 
 def RGB_to_OD(imarr):
@@ -263,31 +260,26 @@ def RGB_to_OD(imarr):
     :rtype: numpy.ndarray
     """
     assert imarr.dtype == np.uint8, f"Input image dtype {imarr.dtype} must be np.uint8"
-    # need to account for possible zero values
-    OD = -np.log((imarr.astype(np.float32) + 1) / 255.0)
-    return OD
+    return -np.log((imarr.astype(np.float32) + 1) / 255.0)
 
 
 def RGB_to_HSV(imarr):
     """convert image from RGB to HSV"""
     assert imarr.dtype == np.uint8, f"Input image dtype {imarr.dtype} must be np.uint8"
-    hsv = cv2.cvtColor(imarr, cv2.COLOR_RGB2HSV)
-    return hsv
+    return cv2.cvtColor(imarr, cv2.COLOR_RGB2HSV)
 
 
 def RGB_to_LAB(imarr):
     """convert image from RGB to LAB color space"""
     assert imarr.dtype == np.uint8, f"Input image dtype {imarr.dtype} must be np.uint8"
     imarr_float32 = imarr.astype(np.float32) / 255
-    lab = cv2.cvtColor(imarr_float32, cv2.COLOR_RGB2Lab)
-    return lab
+    return cv2.cvtColor(imarr_float32, cv2.COLOR_RGB2Lab)
 
 
 def RGB_to_GREY(imarr):
     """convert image_ref from RGB to HSV"""
     assert imarr.dtype == np.uint8, f"Input image dtype {imarr.dtype} must be np.uint8"
-    grey = cv2.cvtColor(imarr, cv2.COLOR_RGB2GRAY)
-    return grey
+    return cv2.cvtColor(imarr, cv2.COLOR_RGB2GRAY)
 
 
 def normalize_matrix_rows(A):

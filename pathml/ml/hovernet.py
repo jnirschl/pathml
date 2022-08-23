@@ -87,11 +87,8 @@ def _make_HoVerNet_residual_block(input_channels, output_channels, stride, n_uni
     Stack multiple residual units into a block.
     output_channels is given as m in Fig. 2 from Graham et al. 2019 paper
     """
-    units = []
-    # first unit in block is different
-    units.append(_HoVerNetResidualUnit(input_channels, output_channels, stride))
-
-    for i in range(n_units - 1):
+    units = [_HoVerNetResidualUnit(input_channels, output_channels, stride)]
+    for _ in range(n_units - 1):
         units.append(_HoVerNetResidualUnit(output_channels, output_channels, stride=1))
         # add a final activation ('preact' for the next unit)
         # This is different from how authors implemented - they added BNRelu before all units except the first, plus
@@ -179,7 +176,7 @@ def _make_HoVerNet_dense_block(input_channels, n_units):
     """
     units = []
     in_dim = input_channels
-    for i in range(n_units):
+    for _ in range(n_units):
         units.append(_HoVerNetDenseUnit(in_dim))
         in_dim += 32
     units.append(_BatchNormRelu(in_dim))
@@ -353,8 +350,7 @@ def _dice_loss_np_head(np_out, true_mask, epsilon=1e-3):
 
     true_mask = _convert_multiclass_mask_to_binary(true_mask)
     true_mask = true_mask.type(torch.long)
-    loss = dice_loss(logits=preds, true=true_mask, eps=epsilon)
-    return loss
+    return dice_loss(logits=preds, true=true_mask, eps=epsilon)
 
 
 def _dice_loss_nc_head(nc_out, true_mask, epsilon=1e-3):
@@ -370,8 +366,7 @@ def _dice_loss_nc_head(nc_out, true_mask, epsilon=1e-3):
         epsilon (float): Epsilon passed to ``dice_loss()``
     """
     truth = torch.argmax(true_mask, dim=1, keepdim=True).type(torch.long)
-    loss = dice_loss(logits=nc_out, true=truth, eps=epsilon)
-    return loss
+    return dice_loss(logits=nc_out, true=truth, eps=epsilon)
 
 
 def _ce_loss_nc_head(nc_out, true_mask):
@@ -383,8 +378,7 @@ def _ce_loss_nc_head(nc_out, true_mask):
     """
     truth = torch.argmax(true_mask, dim=1).type(torch.long)
     ce = nn.CrossEntropyLoss()
-    loss = ce(nc_out, truth)
-    return loss
+    return ce(nc_out, truth)
 
 
 def _ce_loss_np_head(np_out, true_mask):
@@ -398,8 +392,7 @@ def _ce_loss_np_head(np_out, true_mask):
         _convert_multiclass_mask_to_binary(true_mask).type(torch.long).squeeze(dim=1)
     )
     ce = nn.CrossEntropyLoss()
-    loss = ce(np_out, truth)
-    return loss
+    return ce(np_out, truth)
 
 
 def compute_hv_map(mask):
@@ -546,8 +539,7 @@ def _loss_hv_grad(hv_out, true_hv, nucleus_pixel_mask):
     loss_h = F.mse_loss(pred_h, true_h)
     loss_v = F.mse_loss(pred_v, true_v)
 
-    loss = loss_h + loss_v
-    return loss
+    return loss_h + loss_v
 
 
 def _loss_hv_mse(hv_out, true_hv):
@@ -558,8 +550,7 @@ def _loss_hv_mse(hv_out, true_hv):
         hv_out: Ouput of hv branch. Tensor of shape (B, 2, H, W)
         true_hv: Ground truth hv maps. Tensor of shape (B, 2, H, W)
     """
-    loss = F.mse_loss(hv_out, true_hv)
-    return loss
+    return F.mse_loss(hv_out, true_hv)
 
 
 def loss_hovernet(outputs, ground_truth, n_classes=None):
@@ -616,7 +607,7 @@ def loss_hovernet(outputs, ground_truth, n_classes=None):
         nc_loss_dice = 0
         nc_loss_ce = 0
 
-    loss = (
+    return (
         np_loss_dice
         + np_loss_ce
         + hv_loss_mse
@@ -624,7 +615,6 @@ def loss_hovernet(outputs, ground_truth, n_classes=None):
         + nc_loss_dice
         + nc_loss_ce
     )
-    return loss
 
 
 # Post-processing of HoVer-Net outputs
@@ -734,9 +724,7 @@ def _post_process_single_hovernet(
 
     # nuclei values form mountains so inverse to get basins for watershed
     energy = -cv2.GaussianBlur(energy, (3, 3), 0)
-    out = watershed(image=energy, markers=m, mask=tau_q_h)
-
-    return out
+    return watershed(image=energy, markers=m, mask=tau_q_h)
 
 
 def post_process_batch_hovernet(
@@ -804,35 +792,34 @@ def post_process_batch_hovernet(
         out_detection_list.append(preds)
     out_detection = np.stack(out_detection_list)
 
-    if classification:
-        # need to do last step of majority vote
-        # get the pixel-level class predictions from the logits
-        nc_out_preds = F.softmax(nc_out, dim=1).argmax(dim=1)
-
-        out_classification = np.zeros_like(nc_out.numpy(), dtype=np.uint8)
-
-        for batch_ix, nuc_preds in enumerate(out_detection_list):
-            # get labels of nuclei from nucleus detection
-            nucleus_labels = list(np.unique(nuc_preds))
-            if 0 in nucleus_labels:
-                nucleus_labels.remove(0)  # 0 is background
-            nucleus_class_preds = nc_out_preds[batch_ix, ...]
-
-            out_class_preds_single = out_classification[batch_ix, ...]
-
-            # for each nucleus, get the class predictions for the pixels and take a vote
-            for nucleus_ix in nucleus_labels:
-                # get mask for the specific nucleus
-                ix_mask = nuc_preds == nucleus_ix
-                votes = nucleus_class_preds[ix_mask]
-                majority_class = np.argmax(np.bincount(votes))
-                out_class_preds_single[majority_class][ix_mask] = nucleus_ix
-
-            out_classification[batch_ix, ...] = out_class_preds_single
-
-        return out_detection, out_classification
-    else:
+    if not classification:
         return out_detection
+    # need to do last step of majority vote
+    # get the pixel-level class predictions from the logits
+    nc_out_preds = F.softmax(nc_out, dim=1).argmax(dim=1)
+
+    out_classification = np.zeros_like(nc_out.numpy(), dtype=np.uint8)
+
+    for batch_ix, nuc_preds in enumerate(out_detection_list):
+        # get labels of nuclei from nucleus detection
+        nucleus_labels = list(np.unique(nuc_preds))
+        if 0 in nucleus_labels:
+            nucleus_labels.remove(0)  # 0 is background
+        nucleus_class_preds = nc_out_preds[batch_ix, ...]
+
+        out_class_preds_single = out_classification[batch_ix, ...]
+
+        # for each nucleus, get the class predictions for the pixels and take a vote
+        for nucleus_ix in nucleus_labels:
+            # get mask for the specific nucleus
+            ix_mask = nuc_preds == nucleus_ix
+            votes = nucleus_class_preds[ix_mask]
+            majority_class = np.argmax(np.bincount(votes))
+            out_class_preds_single[majority_class][ix_mask] = nucleus_ix
+
+        out_classification[batch_ix, ...] = out_class_preds_single
+
+    return out_detection, out_classification
 
 
 # plotting hovernet outputs
@@ -868,29 +855,25 @@ def _vis_outputs_single(
     else:
         classification = False
 
-    assert len(preds.shape) in [
+    assert len(preds.shape) in {
         3,
         4,
-    ], f"Preds shape is {preds.shape}. Must be (B, H, W) or (B, n_classes, H, W)"
+    }, f"Preds shape is {preds.shape}. Must be (B, H, W) or (B, n_classes, H, W)"
+
 
     if ax is None:
         fig, ax = plt.subplots()
 
     ax.imshow(images[index, ...].permute(1, 2, 0))
 
-    if classification is False:
-        nucleus_labels = list(np.unique(preds[index, ...]))
-        nucleus_labels.remove(0)  # background
-        # plot each individual nucleus
-        for label in nucleus_labels:
+    nucleus_labels = list(np.unique(preds[index, ...]))
+    nucleus_labels.remove(0)  # background
+    for label in nucleus_labels:
+        if not classification:
             nuclei_mask = preds[index, ...] == label
             x, y = segmentation_lines(nuclei_mask.astype(np.uint8))
             ax.scatter(x, y, color=palette[0], marker=".", s=markersize)
-    else:
-        nucleus_labels = list(np.unique(preds[index, ...]))
-        nucleus_labels.remove(0)  # background
-        # plot each individual nucleus
-        for label in nucleus_labels:
+        else:
             for i in range(n_classes):
                 nuclei_mask = preds[index, i, ...] == label
                 x, y = segmentation_lines(nuclei_mask.astype(np.uint8))

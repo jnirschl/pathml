@@ -35,10 +35,12 @@ class h5pathManager:
         if h5path:
             assert (
                 not slidedata
-            ), f"if creating h5pathmanager from h5path, slidedata should not be required"
+            ), "if creating h5pathmanager from h5path, slidedata should not be required"
+
             assert check_valid_h5path_format(
                 h5path
-            ), f"h5path must conform to .h5path standard, see documentation"
+            ), "h5path must conform to .h5path standard, see documentation"
+
             # copy h5path into self.h5
             for ds in h5path.keys():
                 if ds in ["fields", "masks", "tiles"]:
@@ -47,12 +49,10 @@ class h5pathManager:
                     h5path.copy(ds, self.h5)
                     if h5path["counts"].keys():
                         self.counts = readcounts(h5path["counts"])
-                        self.counts.filename = (
-                            str(self.countspath.name) + "/tmpfile.h5ad"
-                        )
+                        self.counts.filename = f"{str(self.countspath.name)}/tmpfile.h5ad"
 
         else:
-            assert slidedata, f"must pass slidedata object to create h5path"
+            assert slidedata, "must pass slidedata object to create h5path"
             # initialize h5path file hierarchy
             # fields
             fieldsgroup = self.h5.create_group("fields")
@@ -79,14 +79,11 @@ class h5pathManager:
             # counts
             countsgroup = self.h5.create_group("counts")
 
-        slide_type_dict = {
-            key: val for key, val in self.h5["fields/slide_type"].attrs.items()
-        }
+        slide_type_dict = dict(self.h5["fields/slide_type"].attrs.items())
         self.slide_type = pathml.core.slide_types.SlideType(**slide_type_dict)
 
     def __repr__(self):
-        rep = f"h5pathManager object, backing a SlideData object named '{self.h5['fields'].attrs['name']}'"
-        return rep
+        return f"h5pathManager object, backing a SlideData object named '{self.h5['fields'].attrs['name']}'"
 
     def add_tile(self, tile):
         """
@@ -98,19 +95,18 @@ class h5pathManager:
         if str(tile.coords) in self.h5["tiles"].keys():
             logger.info(f"Tile is already in tiles. Overwriting {tile.coords} inplace.")
             # remove old cells from self.counts so they do not duplicate
-            if tile.counts:
-                if "tile" in self.counts.obs.keys():
-                    self.counts = self.counts[self.counts.obs["tile"] != tile.coords]
+            if tile.counts and "tile" in self.counts.obs.keys():
+                self.counts = self.counts[self.counts.obs["tile"] != tile.coords]
         # check that the tile matches tile_shape
         existing_shape = eval(self.h5["tiles"].attrs["tile_shape"])
-        if all([s == 0 for s in existing_shape]):
+        if all(s == 0 for s in existing_shape):
             # in this case, tile_shape isn't specified (zeros placeholder)
             # so we set it from the tile image shape
             self.h5["tiles"].attrs["tile_shape"] = str(tile.image.shape).encode("utf-8")
             existing_shape = tile.image.shape
 
         if any(
-            [s1 != s2 for s1, s2 in zip(tile.image.shape[0:2], existing_shape[0:2])]
+            s1 != s2 for s1, s2 in zip(tile.image.shape[:2], existing_shape[:2])
         ):
             raise ValueError(
                 f"cannot add tile of shape {tile.image.shape}. Must match shape of existing tiles: {existing_shape}"
@@ -141,9 +137,9 @@ class h5pathManager:
         )
 
         # save tile_shape as an attribute to enforce consistency
-        if "tile_shape" not in self.h5["tiles"].attrs or (
-            "tile_shape" in self.h5["tiles"].attrs
-            and self.h5["tiles"].attrs["tile_shape"] == b"(0, 0)"
+        if (
+            "tile_shape" not in self.h5["tiles"].attrs
+            or self.h5["tiles"].attrs["tile_shape"] == b"(0, 0)"
         ):
             self.h5["tiles"].attrs["tile_shape"] = str(tile.image.shape).encode("utf-8")
 
@@ -178,14 +174,10 @@ class h5pathManager:
                 self.counts = self.counts.to_memory()
                 self.counts = self.counts.concatenate(tile.counts, join="outer")
                 del self.counts.obs["batch"]
-                self.counts.filename = os.path.join(
-                    self.countspath.name + "/tmpfile.h5ad"
-                )
-            # cannot concatenate empty AnnData object so set to tile.counts then set filename
-            # so the h5ad object is backed by tempfile
+                self.counts.filename = os.path.join(f"{self.countspath.name}/tmpfile.h5ad")
             else:
                 self.counts = tile.counts
-                self.counts.filename = str(self.countspath.name) + "/tmpfile.h5ad"
+                self.counts.filename = f"{str(self.countspath.name)}/tmpfile.h5ad"
 
     def get_tile(self, item):
         """
@@ -198,7 +190,7 @@ class h5pathManager:
             Tile(pathml.core.tile.Tile)
         """
         if isinstance(item, bool):
-            raise KeyError(f"invalid key, pass str or tuple")
+            raise KeyError("invalid key, pass str or tuple")
         if isinstance(item, (str, tuple)):
             item = str(item)
             if item not in self.h5["tiles"].keys():
@@ -224,11 +216,9 @@ class h5pathManager:
         else:
             masks = None
 
-        labels = {
-            key: val for key, val in self.h5["tiles"][item]["labels"].attrs.items()
-        }
+        labels = dict(self.h5["tiles"][item]["labels"].attrs.items())
         name = self.h5["tiles"][item].attrs["name"]
-        if name == "None" or name == 0:
+        if name in ["None", 0]:
             name = None
         coords = eval(self.h5["tiles"][item].attrs["coords"])
 
@@ -246,7 +236,7 @@ class h5pathManager:
         Remove tile from self.h5 by key.
         """
         if not isinstance(key, (str, tuple)):
-            raise KeyError(f"key must be str or tuple, check valid keys in repr")
+            raise KeyError("key must be str or tuple, check valid keys in repr")
         if str(key) not in self.h5["tiles"].keys():
             raise KeyError(f"key {key} is not in Tiles")
         del self.h5["tiles"][str(key)]
@@ -305,9 +295,7 @@ class h5pathManager:
 
     def get_mask(self, item, slicer=None):
         # must check bool separately, since isinstance(True, int) --> True
-        if isinstance(item, bool) or not (
-            isinstance(item, str) or isinstance(item, int)
-        ):
+        if isinstance(item, bool) or not isinstance(item, (str, int)):
             raise KeyError(f"key of type {type(item)} must be of type str or int")
 
         if isinstance(item, str):
@@ -340,13 +328,11 @@ class h5pathManager:
                 f"masks keys must be of type(str) but key was passed of type {type(key)}"
             )
         if key not in self.h5["masks"].keys():
-            raise KeyError(f"key is not in Masks")
+            raise KeyError("key is not in Masks")
         del self.h5["masks"][key]
 
     def get_slidetype(self):
-        slide_type_dict = {
-            key: val for key, val in self.h5["fields/slide_type"].items()
-        }
+        slide_type_dict = dict(self.h5["fields/slide_type"].items())
         return pathml.core.slide_types.SlideType(**slide_type_dict)
 
 

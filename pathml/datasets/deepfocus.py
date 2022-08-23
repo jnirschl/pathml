@@ -47,7 +47,8 @@ class DeepFocusDataModule(BaseDataModule):
         else:
             assert (
                 self._check_integrity()
-            ), f"download is False but data directory does not exist or md5 checksum failed"
+            ), "download is False but data directory does not exist or md5 checksum failed"
+
         self.shuffle = shuffle
         self.transforms = transforms
         self.batch_size = batch_size
@@ -95,18 +96,17 @@ class DeepFocusDataModule(BaseDataModule):
         )
 
     def _check_integrity(self) -> bool:
-        if os.path.exists(
+        if not os.path.exists(
             self.data_dir / Path("outoffocus2017_patches5Classification.h5")
         ):
-            filename = self.data_dir / Path("outoffocus2017_patches5Classification.h5")
-            correctmd5 = "ba7b4a652c2a5a7079b216edd267b628"
-            with open(filename, "rb") as f:
-                fhash = hashlib.md5()
-                while chunk := f.read(8192):
-                    fhash.update(chunk)
-                filemd5 = fhash.hexdigest()
-            return correctmd5 == filemd5
-        return False
+            return False
+        filename = self.data_dir / Path("outoffocus2017_patches5Classification.h5")
+        with open(filename, "rb") as f:
+            fhash = hashlib.md5()
+            while chunk := f.read(8192):
+                fhash.update(chunk)
+            filemd5 = fhash.hexdigest()
+        return filemd5 == "ba7b4a652c2a5a7079b216edd267b628"
 
 
 class DeepFocusDataset(Dataset):
@@ -120,8 +120,8 @@ class DeepFocusDataset(Dataset):
             self.Y = self.datah5["Y"]
         # train 80%
         if fold_ix == 1:
-            self.X = self.datah5["X"][0:163199]
-            self.Y = self.datah5["Y"][0:163199]
+            self.X = self.datah5["X"][:163199]
+            self.Y = self.datah5["Y"][:163199]
         # valid 10%
         if fold_ix == 2:
             self.X = self.datah5["X"][163200:183600]

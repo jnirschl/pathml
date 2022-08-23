@@ -99,23 +99,22 @@ class SlideData:
         ), f"mask are of type {type(masks)} but must be type dict"
         if labels:
             assert all(
-                [isinstance(key, str) for key in labels.keys()]
+                isinstance(key, str) for key in labels.keys()
             ), f"Input label keys are of types {[type(k) for k in labels.keys()]}. All label keys must be of type str."
+
             assert all(
-                [
-                    isinstance(val, (str, np.ndarray))
-                    or np.issubdtype(type(val), np.number)
-                    or np.issubdtype(type(val), np.bool_)
-                    for val in labels.values()
-                ]
-            ), (
-                f"Input label vals are of types {[type(v) for v in labels.values()]}. "
-                f"All label values must be of type str or np.ndarray or a number (i.e. a subdtype of np.number) "
-            )
-        assert tiles is None or (
-            isinstance(tiles, list)
-            and all([isinstance(tile, pathml.core.Tile) for tile in tiles])
+                isinstance(val, (str, np.ndarray))
+                or np.issubdtype(type(val), np.number)
+                or np.issubdtype(type(val), np.bool_)
+                for val in labels.values()
+            ), f"Input label vals are of types {[type(v) for v in labels.values()]}. All label values must be of type str or np.ndarray or a number (i.e. a subdtype of np.number) "
+
+        assert (
+            tiles is None
+            or isinstance(tiles, list)
+            and all(isinstance(tile, pathml.core.Tile) for tile in tiles)
         ), f"tiles are of type {type(tiles)} but must be a list of objects of type pathml.core.tiles.Tile"
+
         assert slide_type is None or isinstance(
             slide_type, pathml.core.SlideType
         ), f"slide_type is of type {type(slide_type)} but must be of type pathml.core.types.SlideType"
@@ -137,11 +136,9 @@ class SlideData:
                 "volumetric": volumetric,
                 "time_series": time_series,
             }
-            # remove any Nones
-            stain_type_dict = {
+            if stain_type_dict := {
                 key: val for key, val in stain_type_dict.items() if val is not None
-            }
-            if stain_type_dict:
+            }:
                 slide_type = pathml.core.slide_types.SlideType(**stain_type_dict)
 
         # get name from filepath if no name is provided
@@ -170,9 +167,9 @@ class SlideData:
         else:
             raise ValueError(f"invalid backend: {repr(backend)}.")
 
-        self._filepath = filepath if filepath else None
+        self._filepath = filepath or None
         self.backend = backend
-        self.slide = backend_obj if backend_obj else None
+        self.slide = backend_obj or None
         self.name = name
         self.labels = labels
         self.slide_type = slide_type
@@ -182,19 +179,17 @@ class SlideData:
             with h5py.File(filepath, "r") as f:
                 self.h5manager = pathml.core.h5managers.h5pathManager(h5path=f)
             self.name = self.h5manager.h5["fields"].attrs["name"]
-            self.labels = {
-                key: val
-                for key, val in self.h5manager.h5["fields"]["labels"].attrs.items()
-            }
+            self.labels = dict(self.h5manager.h5["fields"]["labels"].attrs.items())
             # empty dict evaluates to False
             if not self.labels:
                 self.labels = None
-            slide_type = {
+            if slide_type := {
                 key: val
-                for key, val in self.h5manager.h5["fields"]["slide_type"].attrs.items()
+                for key, val in self.h5manager.h5["fields"][
+                    "slide_type"
+                ].attrs.items()
                 if val is not None
-            }
-            if slide_type:
+            }:
                 self.slide_type = SlideType(**slide_type)
         else:
             self.h5manager = pathml.core.h5managers.h5pathManager(slidedata=self)
@@ -203,9 +198,11 @@ class SlideData:
         self.tiles = pathml.core.Tiles(h5manager=self.h5manager, tiles=tiles)
 
     def __repr__(self):
-        out = []
-        out.append(f"SlideData(name={repr(self.name)}")
-        out.append(f"slide_type={repr(self.slide_type)}")
+        out = [
+            f"SlideData(name={repr(self.name)}",
+            f"slide_type={repr(self.slide_type)}",
+        ]
+
         if self._filepath:
             out.append(f"filepath='{self._filepath}'")
         if self.backend:
@@ -215,9 +212,10 @@ class SlideData:
             nlevels = self.slide.level_count
         except:
             nlevels = 1
-        out.append(f"number of levels: {nlevels}")
-        out.append(repr(self.tiles))
-        out.append(repr(self.masks))
+        out.extend(
+            (f"number of levels: {nlevels}", repr(self.tiles), repr(self.masks))
+        )
+
         if self.tiles:
             out.append(f"tile_shape={eval(self.tiles.tile_shape)}")
         if self.labels:
@@ -229,10 +227,9 @@ class SlideData:
         if self.counts:
             out.append(f"counts matrix of shape {self.counts.shape}")
         else:
-            out.append(f"counts=None")
+            out.append("counts=None")
 
-        out = ",\n\t".join(out)
-        out += ")"
+        out = ",\n\t".join(out) + ")"
         return out
 
     def run(
@@ -276,15 +273,14 @@ class SlideData:
         assert self.slide is not None, "cannot run pipeline because self.slide is None"
 
         if len(self.tiles) != 0:
-            # in this case, tiles already exist
             if not overwrite_existing_tiles:
                 raise Exception(
-                    f"Slide already has tiles. Running the pipeline will overwrite the existing tiles. Use overwrite_existing_tiles=True to force overwriting existing tiles."
+                    "Slide already has tiles. Running the pipeline will overwrite the existing tiles. Use overwrite_existing_tiles=True to force overwriting existing tiles."
                 )
-            else:
-                # delete all existing tiles
-                for tile_key in self.tiles.keys:
-                    self.tiles.remove(tile_key)
+
+            # delete all existing tiles
+            for tile_key in self.tiles.keys:
+                self.tiles.remove(tile_key)
 
         # TODO: be careful here since we are modifying h5 outside of h5manager
         # look into whether we can push this into h5manager
@@ -404,23 +400,20 @@ class SlideData:
         for tile in self.slide.generate_tiles(shape, stride, pad, **kwargs):
             # add masks for tile, if possible
             # i.e. if the SlideData has a Masks object, and the tile has coordinates
-            if self.masks is not None and tile.coords is not None:
-                # masks not supported if pad=True
-                # to implement, need to update Mask.slice to support slices that go beyond the full mask
-                if not pad:
-                    i, j = tile.coords
-                    di, dj = tile.image.shape[0:2]
-                    # add the Masks object for the masks corresponding to the tile
-                    # this assumes that the tile didn't already have any masks
-                    # this should work since the backend reads from image only
-                    # adding safety check just in case to make sure we don't overwrite any existing mask
-                    # if this assertion fails, we will need to rewrite this part
-                    assert (
-                        len(tile.masks) == 0
-                    ), "tile yielded from backend already has mask. slide_data.generate_tiles is trying to overwrite it"
+            if self.masks is not None and tile.coords is not None and not pad:
+                i, j = tile.coords
+                di, dj = tile.image.shape[:2]
+                # add the Masks object for the masks corresponding to the tile
+                # this assumes that the tile didn't already have any masks
+                # this should work since the backend reads from image only
+                # adding safety check just in case to make sure we don't overwrite any existing mask
+                # if this assertion fails, we will need to rewrite this part
+                assert (
+                    len(tile.masks) == 0
+                ), "tile yielded from backend already has mask. slide_data.generate_tiles is trying to overwrite it"
 
-                    tile_slices = [slice(i, i + di), slice(j, j + dj)]
-                    tile.masks = self.masks.slice(tile_slices)
+                tile_slices = [slice(i, i + di), slice(j, j + dj)]
+                tile.masks = self.masks.slice(tile_slices)
 
             # add slide-level labels to each tile, if possible
             if self.labels is not None:
@@ -445,8 +438,9 @@ class SlideData:
         except:
             if not self.slide:
                 raise NotImplementedError(
-                    f"Plotting only supported via backend, but SlideData has no backend."
+                    "Plotting only supported via backend, but SlideData has no backend."
                 )
+
             else:
                 raise NotImplementedError(
                     f"plotting not supported for slide_backend={self.slide.__class__.__name__}"
@@ -471,7 +465,7 @@ class SlideData:
             self.tiles.h5manager.counts = value
         else:
             raise AttributeError(
-                f"cannot assign counts slidedata contains no tiles, first generate tiles"
+                "cannot assign counts slidedata contains no tiles, first generate tiles"
             )
 
     def write(self, path):
@@ -580,7 +574,6 @@ openslideext = {
 bioformatsext = {
     ".tiff",
     ".tif",
-    ".sld",
     ".aim",
     ".al3d",
     ".gel",
@@ -590,12 +583,9 @@ bioformatsext = {
     ".hx",
     ".labels",
     ".cif",
-    ".img",
-    ".hdr",
     ".sif",
     ".png",
     ".afi",
-    ".htd",
     ".pnl",
     ".avi",
     ".arf",
@@ -606,7 +596,6 @@ bioformatsext = {
     ".1sc",
     ".pic",
     ".raw",
-    ".scn",
     ".ims",
     ".img",
     ".cr2",
@@ -639,14 +628,11 @@ bioformatsext = {
     ".mod",
     ".liff",
     ".obf",
-    ".msr",
     ".xdce",
     ".frm",
     ".inr",
-    ".hdr",
     ".ipl",
     ".ipm",
-    ".dat",
     ".par",
     ".jp2",
     ".j2k",
@@ -664,7 +650,6 @@ bioformatsext = {
     ".sxm",
     ".l2d",
     ".lim",
-    ".stk",
     ".nd",
     ".htd",
     ".mnc",
@@ -675,10 +660,8 @@ bioformatsext = {
     ".st",
     ".ali",
     ".map",
-    ".rec",
     ".mrcs",
     ".nef",
-    ".hdr",
     ".nii",
     ".nii.gz",
     ".nrrd",
@@ -748,5 +731,6 @@ bioformatsext = {
     ".lsm",
     ".mdb",
 }
+
 
 dicomext = {".dicom", ".dcm"}

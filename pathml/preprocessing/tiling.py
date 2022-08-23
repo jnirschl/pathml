@@ -75,16 +75,16 @@ def extract_tiles_with_mask(arr, mask, tile_size, stride=None, threshold=0.5):
     assert arr.ndim == 3, f"array of shape {arr.shape} must be 3 dimensional"
     assert mask.ndim == 3, f"mask of shape {mask.shape} must be 3 dimensional"
     assert (
-        arr.shape[0:2] == mask.shape[0:2]
+        arr.shape[:2] == mask.shape[:2]
     ), f"Dims of input image_ref {arr.shape} and mask {mask.shape} must match"
+
 
     arr_tiles = extract_tiles(arr, tile_size=tile_size, stride=stride)
     mask_tiles = extract_tiles(mask, tile_size=tile_size, stride=stride)
 
     tile_mask_means = mask_tiles.mean(axis=tuple(range(1, mask_tiles.ndim)))
 
-    out = arr_tiles[tile_mask_means >= threshold, ...]
-    return out
+    return arr_tiles[tile_mask_means >= threshold, ...]
 
 
 # TODO: do we need to have coords for each tile?

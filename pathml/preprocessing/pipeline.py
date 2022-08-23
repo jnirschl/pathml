@@ -21,8 +21,9 @@ class Pipeline(Transform):
 
     def __init__(self, transform_sequence=None):
         assert transform_sequence is None or all(
-            [isinstance(t, Transform) for t in transform_sequence]
-        ), (f"All elements in input list must be of" f" type pathml.core.Transform")
+            isinstance(t, Transform) for t in transform_sequence
+        ), 'All elements in input list must be of type pathml.core.Transform'
+
         self.transforms = transform_sequence
 
     def __len__(self):
@@ -31,12 +32,11 @@ class Pipeline(Transform):
     def __repr__(self):
         if self.transforms is None:
             return "Pipeline()"
-        else:
-            out = f"Pipeline([\n"
-            for t in self.transforms:
-                out += f"\t{repr(t)},\n"
-            out += "])"
-            return out
+        out = f"Pipeline([\n"
+        for t in self.transforms:
+            out += f"\t{repr(t)},\n"
+        out += "])"
+        return out
 
     def apply(self, tile):
         # this function has side effects

@@ -41,8 +41,7 @@ def create_HE_tile():
         "test_float_label": 3.0,
         "test_bool_label": True,
     }
-    tile = Tile(image=im_np_rgb, coords=(1, 3), masks=masks, labels=labs)
-    return tile
+    return Tile(image=im_np_rgb, coords=(1, 3), masks=masks, labels=labs)
 
 
 @pytest.fixture
@@ -50,8 +49,7 @@ def tile():
     """
     Example of pathml.core.Tile object, with no slide_type
     """
-    tile = create_HE_tile()
-    return tile
+    return create_HE_tile()
 
 
 @pytest.fixture
@@ -87,10 +85,13 @@ def tileVectra():
         "test_bool_label": True,
     }
 
-    tile = Tile(
-        image=region, coords=(0, 0), masks=masks, slide_type=types.Vectra, labels=labs
+    return Tile(
+        image=region,
+        coords=(0, 0),
+        masks=masks,
+        slide_type=types.Vectra,
+        labels=labs,
     )
-    return tile
 
 
 @pytest.fixture
@@ -98,5 +99,4 @@ def anndata():
     """
     Example anndata.AnnData object
     """
-    adata = sc.datasets.pbmc3k_processed()
-    return adata
+    return sc.datasets.pbmc3k_processed()

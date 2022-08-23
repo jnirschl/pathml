@@ -27,6 +27,4 @@ def pannuke_multiclass_mask_to_nucleus_mask(multiclass_mask):
     assert (
         multiclass_mask.shape[1] == 256 and multiclass_mask.shape[2] == 256
     ), f"Expecting a mask with dims (6, 256, 256). Got input of shape {multiclass_mask.shape}"
-    # ignore last channel
-    out = np.sum(multiclass_mask[:-1, :, :], axis=0)
-    return out
+    return np.sum(multiclass_mask[:-1, :, :], axis=0)

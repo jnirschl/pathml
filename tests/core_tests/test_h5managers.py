@@ -29,7 +29,7 @@ def test_h5manager2(tileHE):
     tiles1 = slidedata1.tiles
     tiles2 = slidedata2.tiles
     coordslist = [(0, 0), (0, 500), (0, 0)]
-    for coord in coordslist[0:2]:
+    for coord in coordslist[:2]:
         tile = copy.deepcopy(tileHE)
         tile.coords = coord
         tiles1.add(tile)

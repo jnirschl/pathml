@@ -30,13 +30,14 @@ class SlideDataset:
         return len(self.slides)
 
     def __repr__(self):
-        out = []
-        out.append(f"SlideDataset object with {len(self)} slides")
-        out.append(f"names: {reprlib.repr([s.name for s in self.slides])}")
+        out = [
+            f"SlideDataset object with {len(self)} slides",
+            f"names: {reprlib.repr([s.name for s in self.slides])}",
+        ]
+
         out.append(f"shapes: {reprlib.repr([s.shape for s in self.slides])}")
 
-        out = ",\n\t".join(out)
-        out += ")"
+        out = ",\n\t".join(out) + ")"
         return out
 
     def run(self, pipeline, client=None, distributed=True, **kwargs):
@@ -75,19 +76,19 @@ class SlideDataset:
             filenames (List[str], optional): list of filenames to be used.
         """
         d = Path(dir)
-        if filenames:
-            if len(filenames) != self.__len__():
-                raise ValueError(
-                    f"input list of filenames has {len(filenames)} elements but must be same length as number of slides in dataset ({self.__len__()})"
-                )
+        if filenames and len(filenames) != self.__len__():
+            raise ValueError(
+                f"input list of filenames has {len(filenames)} elements but must be same length as number of slides in dataset ({self.__len__()})"
+            )
 
         for i, slide in enumerate(self.slides):
             if filenames:
-                slide_path = d / (filenames[i] + ".h5path")
+                slide_path = d / f"{filenames[i]}.h5path"
             elif slide.name:
-                slide_path = d / (slide.name + ".h5path")
+                slide_path = d / f"{slide.name}.h5path"
             else:
                 raise ValueError(
-                    f"slide does not have a .name attribute. Must supply a 'filenames' argument."
+                    "slide does not have a .name attribute. Must supply a 'filenames' argument."
                 )
+
             slide.write(slide_path)

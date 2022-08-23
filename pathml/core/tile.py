@@ -72,23 +72,22 @@ class Tile:
         ), f"labels is of type {type(labels)} but must be of type dict or None"
         if labels:
             assert all(
-                [isinstance(key, str) for key in labels.keys()]
+                isinstance(key, str) for key in labels.keys()
             ), f"Input label keys are of types {[type(k) for k in labels.keys()]}. All label keys must be of type str."
-            assert all(
-                [
-                    isinstance(val, (str, np.ndarray))
-                    or np.issubdtype(type(val), np.number)
-                    or np.issubdtype(type(val), np.bool_)
-                    for val in labels.values()
-                ]
-            ), (
-                f"Input label vals are of types {[type(v) for v in labels.values()]}. "
-                f"All label values must be of type str or np.ndarray or a number (i.e. a subdtype of np.number) "
-            )
 
-        assert (
-            name != "None" and name != 0
-        ), "Cannot use values of '0' or 'None' as tile names"
+            assert all(
+                isinstance(val, (str, np.ndarray))
+                or np.issubdtype(type(val), np.number)
+                or np.issubdtype(type(val), np.bool_)
+                for val in labels.values()
+            ), f"Input label vals are of types {[type(v) for v in labels.values()]}. All label values must be of type str or np.ndarray or a number (i.e. a subdtype of np.number) "
+
+
+        assert name not in [
+            "None",
+            0,
+        ], "Cannot use values of '0' or 'None' as tile names"
+
         assert name is None or isinstance(
             name, str
         ), f"name is of type {type(name)} but must be of type str or None"
@@ -106,9 +105,9 @@ class Tile:
                 "volumetric": volumetric,
                 "time_series": time_series,
             }
-            # remove any Nones
-            stain_type_dict = {key: val for key, val in stain_type_dict.items() if val}
-            if stain_type_dict:
+            if stain_type_dict := {
+                key: val for key, val in stain_type_dict.items() if val
+            }:
                 slide_type = pathml.core.slide_types.SlideType(**stain_type_dict)
 
         assert counts is None or isinstance(
@@ -133,11 +132,13 @@ class Tile:
         self.counts = counts
 
     def __repr__(self):
-        out = []
-        out.append(f"Tile(coords={self.coords}")
-        out.append(f"name={self.name}")
-        out.append(f"image shape: {self.image.shape}")
-        out.append(f"slide_type={repr(self.slide_type)}")
+        out = [
+            f"Tile(coords={self.coords}",
+            f"name={self.name}",
+            f"image shape: {self.image.shape}",
+            f"slide_type={repr(self.slide_type)}",
+        ]
+
         if self.labels:
             out.append(
                 f"{len(self.labels)} labels: {reprlib.repr(list(self.labels.keys()))}"
@@ -153,9 +154,8 @@ class Tile:
         if self.counts:
             out.append(f"counts matrix of shape {self.counts.shape}")
         else:
-            out.append(f"counts=None")
-        out = ",\n\t".join(out)
-        out += ")"
+            out.append("counts=None")
+        out = ",\n\t".join(out) + ")"
         return out
 
     def plot(self, ax=None):

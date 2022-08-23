@@ -90,13 +90,12 @@ class GaussianBlur(Transform):
 
     def F(self, image):
         assert image.dtype == np.uint8, f"image dtype {image.dtype} must be np.uint8"
-        out = cv2.GaussianBlur(
+        return cv2.GaussianBlur(
             image,
             ksize=(self.k_size, self.k_size),
             sigmaX=self.sigma,
             sigmaY=self.sigma,
         )
-        return out
 
     def apply(self, tile):
         assert isinstance(
@@ -324,10 +323,9 @@ class MorphOpen(Transform):
     def F(self, mask):
         assert mask.dtype == np.uint8, f"mask type {mask.dtype} must be np.uint8"
         k = np.ones((self.kernel_size, self.kernel_size), dtype=np.uint8)
-        out = cv2.morphologyEx(
+        return cv2.morphologyEx(
             src=mask, kernel=k, op=cv2.MORPH_OPEN, iterations=self.n_iterations
         )
-        return out
 
     def apply(self, tile):
         assert isinstance(
@@ -368,10 +366,9 @@ class MorphClose(Transform):
     def F(self, mask):
         assert mask.dtype == np.uint8, f"mask type {mask.dtype} must be np.uint8"
         k = np.ones((self.kernel_size, self.kernel_size), dtype=np.uint8)
-        out = cv2.morphologyEx(
+        return cv2.morphologyEx(
             src=mask, kernel=k, op=cv2.MORPH_CLOSE, iterations=self.n_iterations
         )
-        return out
 
     def apply(self, tile):
         assert isinstance(
@@ -648,10 +645,8 @@ class StainNormalizationHE(Transform):
         if stain_estimation_method.lower() == "vahadane":
             try:
                 import spams
-            except (ImportError, ModuleNotFoundError):
-                raise Exception(
-                    f"Vahadane method requires `spams` package to be installed"
-                )
+            except ImportError:
+                raise Exception("Vahadane method requires `spams` package to be installed")
 
         self.target = target.lower()
         self.stain_estimation_method = stain_estimation_method.lower()
@@ -742,8 +737,8 @@ class StainNormalizationHE(Transform):
         """
         try:
             import spams
-        except (ImportError, ModuleNotFoundError):
-            raise Exception(f"Vahadane method requires `spams` package to be installed")
+        except ImportError:
+            raise Exception("Vahadane method requires `spams` package to be installed")
         # convert to Optical Density (OD) space
         image_OD = RGB_to_OD(image)
         # reshape to (M*N)x3
@@ -807,13 +802,11 @@ class StainNormalizationHE(Transform):
         # project back to OD space
         stain1 = pcs @ v_max
         stain2 = pcs @ v_min
-        # a heuristic to make the vector corresponding to hematoxylin first and the
-        # one corresponding to eosin second
-        if stain2[0] > stain1[0]:
-            HE = np.array((stain2, stain1)).T
-        else:
-            HE = np.array((stain1, stain2)).T
-        return HE
+        return (
+            np.array((stain2, stain1)).T
+            if stain2[0] > stain1[0]
+            else np.array((stain1, stain2)).T
+        )
 
     def _estimate_pixel_concentrations_lstsq(self, image, stain_matrix):
         """
@@ -826,14 +819,7 @@ class StainNormalizationHE(Transform):
         """
         image_OD = RGB_to_OD(image).reshape(-1, 3)
 
-        # Get concentrations of each stain at each pixel
-        # image_ref.T = S @ C.T
-        #   image_ref.T is 3x(M*N)
-        #   stain matrix S is 3x2
-        #   concentration matrix C.T is 2x(M*N)
-        # solve for C using least squares
-        C = np.linalg.lstsq(stain_matrix, image_OD.T, rcond=None)[0].T
-        return C
+        return np.linalg.lstsq(stain_matrix, image_OD.T, rcond=None)[0].T
 
     def _estimate_pixel_concentrations_lasso(self, image, stain_matrix):
         """
@@ -1071,12 +1057,11 @@ class TissueDetectionHE(Transform):
         closed = MorphClose(
             kernel_size=self.morph_k_size, n_iterations=self.morph_n_iter
         ).F(opened)
-        tissue = ForegroundDetection(
+        return ForegroundDetection(
             min_region_size=self.min_region_size,
             max_hole_size=self.max_hole_size,
             outer_contours_only=self.outer_contours_only,
         ).F(closed)
-        return tissue
 
     def apply(self, tile):
         assert isinstance(
@@ -1163,17 +1148,14 @@ class LabelArtifactTileHE(Transform):
         s = image_hsi[:, :, 1]
         i = image_hsi[:, :, 2]
         whitespace = np.logical_and(i >= 0.1, s <= 0.1)
-        p1 = np.logical_and(0.4 < h, 0.7 > h)
+        p1 = np.logical_and(h > 0.4, h < 0.7)
         p2 = np.logical_and(p1, s > 0.1)
         pen_mark = np.logical_or(p2, i < 0.1)
         tissue = ~np.logical_or(whitespace, pen_mark)
         mean_whitespace = np.mean(whitespace)
         mean_pen = np.mean(pen_mark)
         mean_tissue = np.mean(tissue)
-        if (mean_whitespace >= 0.8) or (mean_pen >= 0.05) or (mean_tissue < 0.5):
-            return True
-        else:
-            return False
+        return mean_whitespace >= 0.8 or mean_pen >= 0.05 or mean_tissue < 0.5
 
     def apply(self, tile):
         assert isinstance(
@@ -1230,7 +1212,8 @@ class DeconvolveMIF(Transform):
         if psfparameters:
             assert (
                 psf is None
-            ), f"you passed an empirical psf, cannot simultaneously use theoretical psf"
+            ), "you passed an empirical psf, cannot simultaneously use theoretical psf"
+
         self.psfparameters = psfparameters
         self.iterations = iterations
 
@@ -1241,28 +1224,9 @@ class DeconvolveMIF(Transform):
         )
 
     def F(self, image, slidetype):
-        # TODO: get image in skimage format
-        if self.slidetype == pathml.core.slide_data.VectraSlide:
-            if self.psf is None and self.psfparameters:
-                # create theoretical PSF from parameters
-                # pip psf
-                # astropsf
-                # wetzstein lab version
-                pass
-            else:
-                # default theoretical PSF
-                pass
-        elif self.slidetype == pathml.core.slide_data.CODEXSlide:
-            if self.psf is None and self.psfparameters:
-                # create theoretical PSF from parameters
-                pass
-            else:
-                # default theoretical PSF
-                pass
-        deconvolved = restoration.richardson_lucy(
+        return restoration.richardson_lucy(
             image, self.psf, iterations=self.iterations
         )
-        return deconvolved
 
     def apply(self, tile):
         assert isinstance(
@@ -1318,20 +1282,18 @@ class SegmentMIF(Transform):
     ):
         assert isinstance(
             nuclear_channel, int
-        ), f"nuclear_channel must be an int indicating index"
+        ), "nuclear_channel must be an int indicating index"
+
         assert isinstance(
             cytoplasm_channel, int
-        ), f"cytoplasm_channel must be an int indicating index"
+        ), "cytoplasm_channel must be an int indicating index"
+
         self.nuclear_channel = nuclear_channel
         self.cytoplasm_channel = cytoplasm_channel
         self.image_resolution = image_resolution
-        self.preprocess_kwargs = preprocess_kwargs if preprocess_kwargs else {}
-        self.postprocess_kwargs_nuclear = (
-            postprocess_kwargs_nuclear if postprocess_kwargs_nuclear else {}
-        )
-        self.postprocess_kwargs_whole_cell = (
-            postprocess_kwargs_whole_cell if postprocess_kwargs_whole_cell else {}
-        )
+        self.preprocess_kwargs = preprocess_kwargs or {}
+        self.postprocess_kwargs_nuclear = postprocess_kwargs_nuclear or {}
+        self.postprocess_kwargs_whole_cell = postprocess_kwargs_whole_cell or {}
 
         if model.lower() == "mesmer":
             try:
@@ -1341,15 +1303,16 @@ class SegmentMIF(Transform):
                     "The Mesmer model in SegmentMIF requires extra libraries to be installed.\nYou can install these via pip using:\npip install deepcell"
                 )
                 raise ImportError(
-                    f"The Mesmer model in SegmentMIF requires deepcell to be installed"
+                    "The Mesmer model in SegmentMIF requires deepcell to be installed"
                 ) from None
+
             self.model = model.lower()
         elif model.lower() == "cellpose":
             """from cellpose import models
             self.model = models.Cellpose(gpu=self.gpu, model_type='cyto')"""
-            raise NotImplementedError(f"Cellpose model not currently supported")
+            raise NotImplementedError("Cellpose model not currently supported")
         else:
-            raise ValueError(f"currently only supports mesmer model")
+            raise ValueError("currently only supports mesmer model")
 
     def __repr__(self):
         return (
@@ -1369,36 +1332,33 @@ class SegmentMIF(Transform):
             axis=-1,
         )
 
-        # initialize model
-        # need to do it inside F() instead of __init__() for compatibility with dask distributed
-        if self.model == "mesmer":
-            from deepcell.applications import Mesmer
-
-            model = Mesmer()
-            cell_segmentation_predictions = model.predict(
-                nuc_cytoplasm,
-                image_mpp=self.image_resolution,
-                compartment="whole-cell",
-                preprocess_kwargs=self.preprocess_kwargs,
-                postprocess_kwargs_whole_cell=self.postprocess_kwargs_whole_cell,
-            )
-            nuclear_segmentation_predictions = model.predict(
-                nuc_cytoplasm,
-                image_mpp=self.image_resolution,
-                compartment="nuclear",
-                preprocess_kwargs=self.preprocess_kwargs,
-                postprocess_kwargs_nuclear=self.postprocess_kwargs_nuclear,
-            )
-            cell_segmentation_predictions = np.squeeze(
-                cell_segmentation_predictions, axis=0
-            )
-            nuclear_segmentation_predictions = np.squeeze(
-                nuclear_segmentation_predictions, axis=0
-            )
-            del model
-            return cell_segmentation_predictions, nuclear_segmentation_predictions
-        else:
+        if self.model != "mesmer":
             raise NotImplementedError(f"model={self.model} currently not supported.")
+        from deepcell.applications import Mesmer
+
+        model = Mesmer()
+        cell_segmentation_predictions = model.predict(
+            nuc_cytoplasm,
+            image_mpp=self.image_resolution,
+            compartment="whole-cell",
+            preprocess_kwargs=self.preprocess_kwargs,
+            postprocess_kwargs_whole_cell=self.postprocess_kwargs_whole_cell,
+        )
+        nuclear_segmentation_predictions = model.predict(
+            nuc_cytoplasm,
+            image_mpp=self.image_resolution,
+            compartment="nuclear",
+            preprocess_kwargs=self.preprocess_kwargs,
+            postprocess_kwargs_nuclear=self.postprocess_kwargs_nuclear,
+        )
+        cell_segmentation_predictions = np.squeeze(
+            cell_segmentation_predictions, axis=0
+        )
+        nuclear_segmentation_predictions = np.squeeze(
+            nuclear_segmentation_predictions, axis=0
+        )
+        del model
+        return cell_segmentation_predictions, nuclear_segmentation_predictions
 
     def apply(self, tile):
         assert isinstance(
@@ -1471,12 +1431,13 @@ class QuantifyMIF(Transform):
         counts = anndata.AnnData(
             X=X,
             obs=[
-                tuple([i + coords_offset[0], j + coords_offset[1]])
+                (i + coords_offset[0], j + coords_offset[1])
                 for i, j in zip(
                     countsdataframe["centroid-0"], countsdataframe["centroid-1"]
                 )
             ],
         )
+
         counts.obs["label"] = countsdataframe["label"]
         counts.obs = counts.obs.rename(columns={0: "y", 1: "x"})
         counts.obs["filled_area"] = countsdataframe["filled_area"]
@@ -1522,7 +1483,7 @@ class CollapseRunsVectra(Transform):
         pass
 
     def __repr__(self):
-        return f"CollapseRunsVectra()"
+        return "CollapseRunsVectra()"
 
     def F(self, image):
         image = np.squeeze(image)

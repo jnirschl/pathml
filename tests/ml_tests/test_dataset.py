@@ -17,7 +17,7 @@ class TestingTransform(Transform):
 
     def apply(self, tile):
         tile.labels = {"testing_coords_label": tile.coords}
-        tile.masks["test"] = np.ones(tile.image.shape[0:2]) * 5
+        tile.masks["test"] = np.ones(tile.image.shape[:2]) * 5
 
 
 @pytest.mark.parametrize(
