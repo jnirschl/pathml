@@ -45,8 +45,7 @@ def test_download_from_url(tmp_path):
 
 @pytest.fixture(scope="module")
 def random_rgb():
-    im = np.random.randint(low=0, high=255, size=(50, 50, 3), dtype=np.uint8)
-    return im
+    return np.random.randint(low=0, high=255, size=(50, 50, 3), dtype=np.uint8)
 
 
 @pytest.fixture(scope="module")
@@ -65,14 +64,12 @@ def example_contour(simple_mask):
 
 @pytest.fixture(scope="module")
 def random_5_5_5_5():
-    m = np.random.rand(5, 5, 5, 5)
-    return m
+    return np.random.rand(5, 5, 5, 5)
 
 
 @pytest.fixture(scope="module")
 def random_50_50():
-    m = np.random.rand(50, 50)
-    return m
+    return np.random.rand(50, 50)
 
 
 # Tests
@@ -86,7 +83,7 @@ def test_color_conversion_shape(conv, random_rgb):
 
 def test_RGB_to_GREY(random_rgb):
     im_converted = RGB_to_GREY(random_rgb)
-    assert im_converted.shape[0:2] == random_rgb.shape[0:2]
+    assert im_converted.shape[:2] == random_rgb.shape[:2]
 
 
 def test_segmentation_lines(simple_mask):

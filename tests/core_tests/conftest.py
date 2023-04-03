@@ -20,10 +20,12 @@ def example_slide_data():
         "test_float_label": 3.0,
         "test_bool_label": True,
     }
-    wsi = SlideData(
-        "tests/testdata/small_HE.svs", name=f"test", labels=labs, backend="openslide"
+    return SlideData(
+        "tests/testdata/small_HE.svs",
+        name="test",
+        labels=labs,
+        backend="openslide",
     )
-    return wsi
 
 
 @pytest.fixture
@@ -36,15 +38,14 @@ def example_slide_data_with_tiles(tile):
         "test_bool_label": True,
     }
     adata = anndata.AnnData()
-    wsi = SlideData(
+    return SlideData(
         "tests/testdata/small_HE.svs",
-        name=f"test",
+        name="test",
         labels=labs,
         backend="openslide",
         tiles=[tile],
         counts=adata,
     )
-    return wsi
 
 
 @pytest.fixture()
@@ -66,8 +67,7 @@ def slide_dataset(example_slide_data_with_tiles):
         )
         for i in range(n)
     ]
-    slide_dataset = SlideDataset(slide_list)
-    return slide_dataset
+    return SlideDataset(slide_list)
 
 
 @pytest.fixture()
@@ -90,12 +90,10 @@ def slide_dataset_with_tiles(tile, example_slide_data_with_tiles):
         )
         for i in range(n)
     ]
-    slide_dataset = SlideDataset(slide_list)
-    return slide_dataset
+    return SlideDataset(slide_list)
 
 
 @pytest.fixture
 def vectra_slide():
     temp_path = "tests/testdata/small_vectra.qptiff"
-    vectra_slide = VectraSlide(temp_path, backend="bioformats", slide_type=types.Vectra)
-    return vectra_slide
+    return VectraSlide(temp_path, backend="bioformats", slide_type=types.Vectra)

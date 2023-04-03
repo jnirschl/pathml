@@ -71,14 +71,14 @@ def test_run_existing_tiles(slide_dataset_with_tiles, overwrite_tiles):
 
 @pytest.fixture
 def he_slide():
-    wsi = HESlide("tests/testdata/small_HE.svs", backend="openslide")
-    return wsi
+    return HESlide("tests/testdata/small_HE.svs", backend="openslide")
 
 
 @pytest.fixture
 def multiparametric_slide():
-    wsi = MultiparametricSlide("tests/testdata/smalltif.tif", backend="bioformats")
-    return wsi
+    return MultiparametricSlide(
+        "tests/testdata/smalltif.tif", backend="bioformats"
+    )
 
 
 def test_multiparametric(multiparametric_slide):
@@ -166,10 +166,7 @@ def compare_dict_ignore_order(d1, d2):
     vals_b = list(d2.values()).sort()
     if vals_a != vals_b:
         return False
-    for k1, k2 in zip(vals_a, vals_b):
-        if d1[k1] != d2[k2]:
-            return False
-    return True
+    return all(d1[k1] == d2[k2] for k1, k2 in zip(vals_a, vals_b))
 
 
 @pytest.mark.parametrize("write", [True, False])
@@ -177,11 +174,7 @@ def test_run_and_write(tmpdir, write):
     wsi = HESlide("tests/testdata/small_HE.svs", backend="openslide", name="testwrite")
     pipe = Pipeline()
 
-    if write:
-        write_dir_arg = tmpdir
-    else:
-        write_dir_arg = None
-
+    write_dir_arg = tmpdir if write else None
     wsi.run(pipe, tile_size=500, distributed=False, write_dir=write_dir_arg)
 
     written_path = tmpdir / "testwrite.h5path"

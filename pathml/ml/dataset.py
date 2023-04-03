@@ -64,9 +64,7 @@ class TileDataset(torch.utils.data.Dataset):
         else:
             masks = None
 
-        labels = {
-            key: val for key, val in self.h5["tiles"][str(k)]["labels"].attrs.items()
-        }
+        labels = dict(self.h5["tiles"][str(k)]["labels"].attrs.items())
 
         if tile_image.ndim == 3:
             # swap axes from HWC to CHW for pytorch

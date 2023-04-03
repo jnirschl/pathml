@@ -21,11 +21,10 @@ def smallmasks():
     slidedata = HESlide("tests/testdata/small_HE.svs")
     shape = (224, 224, 3)
     im = np.arange(np.product(shape)).reshape(shape)
-    testmasks = Masks(
+    return Masks(
         h5manager=pathml.core.h5managers.h5pathManager(slidedata=slidedata),
         masks={"mask1": im, "mask2": im},
     )
-    return testmasks
 
 
 @pytest.mark.parametrize(

@@ -21,7 +21,7 @@ def test_dataset_save(tmp_path, slide_dataset):
     slide_dataset.write(tmp_path)
     # now check each file
     for slide in slide_dataset:
-        fname = Path(str(tmp_path / slide.name) + ".h5path")
+        fname = Path(f"{str(tmp_path / slide.name)}.h5path")
         assert fname.is_file()
 
 
@@ -39,11 +39,7 @@ def test_run_pipeline_and_tile_dataset_and_reshape(slide_dataset):
 def test_run_and_write_dataset(tmpdir, write, slide_dataset):
     pipe = Pipeline()
 
-    if write:
-        write_dir_arg = tmpdir
-    else:
-        write_dir_arg = None
-
+    write_dir_arg = tmpdir if write else None
     slide_dataset.run(pipe, tile_size=500, distributed=False, write_dir=write_dir_arg)
 
     for s in slide_dataset:

@@ -79,8 +79,8 @@ def test_pipeline_bioformats_tiff(tmp_path, dist, tile_size):
     else:
         cli = None
     slide.run(pipeline, distributed=dist, client=cli, tile_size=tile_size)
-    slide.write(path=str(tmp_path) + "tifslide.h5")
-    readslidedata = SlideData(str(tmp_path) + "tifslide.h5")
+    slide.write(path=f"{str(tmp_path)}tifslide.h5")
+    readslidedata = SlideData(f"{str(tmp_path)}tifslide.h5")
     assert readslidedata.name == slide.name
     np.testing.assert_equal(readslidedata.labels, slide.labels)
     if slide.masks is None:
@@ -96,7 +96,7 @@ def test_pipeline_bioformats_tiff(tmp_path, dist, tile_size):
         assert slide.counts.var.empty
     else:
         np.testing.assert_equal(readslidedata.counts.var, slide.counts.var)
-    os.remove(str(tmp_path) + "tifslide.h5")
+    os.remove(f"{str(tmp_path)}tifslide.h5")
     if dist:
         cli.shutdown()
 
@@ -126,8 +126,8 @@ def test_pipeline_bioformats_vectra(tmp_path, dist, tile_size):
     else:
         cli = None
     slide.run(pipeline, distributed=dist, client=cli, tile_size=tile_size)
-    slide.write(path=str(tmp_path) + "vectraslide.h5")
-    os.remove(str(tmp_path) + "vectraslide.h5")
+    slide.write(path=f"{str(tmp_path)}vectraslide.h5")
+    os.remove(f"{str(tmp_path)}vectraslide.h5")
     if dist:
         cli.shutdown()
 

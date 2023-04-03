@@ -87,9 +87,10 @@ class OpenSlideBackend(SlideBackend):
         else:
             assert (
                 isinstance(size, tuple)
-                and all([isinstance(a, int) for a in size])
+                and all(isinstance(a, int) for a in size)
                 and len(size) == 2
             ), f"Input size {size} not valid. Must be an integer or a tuple of two integers."
+
         if level is None:
             level = 0
         else:
@@ -110,8 +111,7 @@ class OpenSlideBackend(SlideBackend):
 
         h, w = size
         region = self.slide.read_region(location=(j, i), level=level, size=(w, h))
-        region_rgb = pil_to_rgb(region)
-        return region_rgb
+        return pil_to_rgb(region)
 
     def get_image_shape(self, level=0):
         """
@@ -352,12 +352,11 @@ class BioFormatsBackend(SlideBackend):
         """
         if level is None:
             return self.shape[:2]
-        else:
-            assert isinstance(level, int), f"level {level} invalid. Must be an int."
-            assert (
-                level < self.level_count
-            ), f"input level {level} invalid for slide with {self.level_count} levels total"
-            return self.shape_list[level][:2]
+        assert isinstance(level, int), f"level {level} invalid. Must be an int."
+        assert (
+            level < self.level_count
+        ), f"input level {level} invalid for slide with {self.level_count} levels total"
+        return self.shape_list[level][:2]
 
     def extract_region(
         self, location, size, level=0, series_as_channels=False, normalize=True
@@ -397,7 +396,7 @@ class BioFormatsBackend(SlideBackend):
         if not (
             isinstance(location, tuple)
             and len(location) < 3
-            and all([isinstance(x, int) for x in location])
+            and all(isinstance(x, int) for x in location)
         ):
             raise ValueError(
                 f"input location {location} invalid. Must be a tuple of integer coordinates of len<2"
@@ -405,13 +404,13 @@ class BioFormatsBackend(SlideBackend):
         if not (
             isinstance(size, tuple)
             and len(size) < 3
-            and all([isinstance(x, int) for x in size])
+            and all(isinstance(x, int) for x in size)
         ):
             raise ValueError(
                 f"input size {size} invalid. Must be a tuple of integer coordinates of len<2"
             )
         if series_as_channels:
-            logger.info(f"using series_as_channels=True")
+            logger.info("using series_as_channels=True")
             if level != 0:
                 logger.exception(
                     f"When series_as_channels=True, must use level=0. Input 'level={level}' invalid."
@@ -507,20 +506,20 @@ class BioFormatsBackend(SlideBackend):
             shape = data.slide.get_image_shape()
             thumb = data.slide.get_thumbnail(size=(1000,1000, shape[2], shape[3], shape[4]))
         """
-        assert isinstance(size, (tuple, type(None))), f"Size must be a tuple of ints."
-        if size is not None:
-            if len(size) != len(self.shape):
-                size = size + self.shape[len(size) :]
+        assert isinstance(size, (tuple, type(None))), "Size must be a tuple of ints."
+        if size is not None and len(size) != len(self.shape):
+            size = size + self.shape[len(size) :]
         if self.shape[0] * self.shape[1] * self.shape[2] * self.shape[3] > 2147483647:
             raise Exception(
                 f"Java arrays allocate maximum 32 bits (~2GB). Image size is {self.imsize}"
             )
         array = self.extract_region(location=(0, 0), size=self.shape[:2])
         if size is not None:
-            ratio = tuple([x / y for x, y in zip(size, self.shape)])
+            ratio = tuple(x / y for x, y in zip(size, self.shape))
             assert (
                 ratio[3] == 1
-            ), f"cannot interpolate between fluor channels, resampling doesn't apply, fix size[3]"
+            ), "cannot interpolate between fluor channels, resampling doesn't apply, fix size[3]"
+
             image_array = zoom(array, ratio)
         return image_array
 
@@ -768,7 +767,7 @@ class DICOMBackend(SlideBackend):
         Returns:
             np.ndarray: image at the specified region
         """
-        assert level == 0 or level is None, f"dicom does not support levels"
+        assert level == 0 or level is None, "dicom does not support levels"
         # check inputs first
         # check location
         if isinstance(location, tuple):
@@ -824,15 +823,13 @@ class DICOMBackend(SlideBackend):
 
         frame_bytes = b"".join(chunks)
 
-        decoded_frame_array = self._decode_frame(
+        return self._decode_frame(
             value=frame_bytes,
             rows=self.metadata.Rows,
             columns=self.metadata.Columns,
             samples_per_pixel=self.metadata.SamplesPerPixel,
             transfer_syntax_uid=self.metadata.file_meta.TransferSyntaxUID,
         )
-
-        return decoded_frame_array
 
     @staticmethod
     def _decode_frame(
@@ -887,7 +884,7 @@ class DICOMBackend(SlideBackend):
         Yields:
             pathml.core.tile.Tile: Extracted Tile object
         """
-        assert level == 0 or level is None, f"dicom does not support levels"
+        assert level == 0 or level is None, "dicom does not support levels"
         for i in range(self.n_frames):
 
             if not pad:
@@ -900,5 +897,4 @@ class DICOMBackend(SlideBackend):
 
             frame_im = self.extract_region(location=i)
             coords = self._index_to_coords(i)
-            frame_tile = pathml.core.tile.Tile(image=frame_im, coords=coords)
-            yield frame_tile
+            yield pathml.core.tile.Tile(image=frame_im, coords=coords)

@@ -75,8 +75,8 @@ class SlideType:
         If ``a`` is a SlideType object, then ``a == SlideType(**a.asdict())`` will be ``True``.
         """
         return {
-            "stain": self.stain if self.stain else "",
-            "platform": self.platform if self.platform else "",
+            "stain": self.stain or "",
+            "platform": self.platform or "",
             "tma": self.tma if self.tma is not None else 0,
             "rgb": self.rgb if self.rgb is not None else 0,
             "volumetric": self.volumetric if self.volumetric is not None else 0,
@@ -146,8 +146,11 @@ class _PremadeTypes:
         )
 
     def __repr__(self):
-        out = "pathml.types provides pre-made slide types for convenience. Available types include:\n"
-        out += "'types.HE', 'types.IHC', 'types.IF', 'types.CODEX', 'types.Vectra'\n"
+        out = (
+            "pathml.types provides pre-made slide types for convenience. Available types include:\n"
+            + "'types.HE', 'types.IHC', 'types.IF', 'types.CODEX', 'types.Vectra'\n"
+        )
+
         out += "Please refer to documentation for pathml.core.SlideType"
         return out
 

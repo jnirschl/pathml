@@ -39,7 +39,8 @@ def test_incomplete_fails(create_incomplete_deepfocus_data):
 
 def check_deepfocus_data_urls():
     # make sure that the urls for the pannuke data are still valid!
-    url = f"https://zenodo.org/record/1134848/files/outoffocus2017_patches5Classification.h5"
+    url = "https://zenodo.org/record/1134848/files/outoffocus2017_patches5Classification.h5"
+
     r = urllib.request.urlopen(url)
     # HTTP status code 200 means "OK"
     assert r.getcode() == 200

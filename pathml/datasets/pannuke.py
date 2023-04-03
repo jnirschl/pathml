@@ -133,17 +133,16 @@ class PanNukeDataset(data.Dataset):
                 mask_1c = mask
             hv_map = compute_hv_map(mask_1c)
 
-        if self.hovernet_preprocess:
-            out = (
+        return (
+            (
                 torch.from_numpy(im),
                 torch.from_numpy(mask),
                 torch.from_numpy(hv_map),
                 tissue_type,
             )
-        else:
-            out = torch.from_numpy(im), torch.from_numpy(mask), tissue_type
-
-        return out
+            if self.hovernet_preprocess
+            else (torch.from_numpy(im), torch.from_numpy(mask), tissue_type)
+        )
 
 
 class PanNukeDataModule(BaseDataModule):
@@ -235,10 +234,7 @@ class PanNukeDataModule(BaseDataModule):
         self.hovernet_preprocess = hovernet_preprocess
 
     def _get_dataset(self, fold_ix, augment=True):
-        if augment:
-            transforms = self.transforms
-        else:
-            transforms = None
+        transforms = self.transforms if augment else None
         return PanNukeDataset(
             data_dir=self.data_dir,
             fold_ix=fold_ix,
@@ -250,7 +246,7 @@ class PanNukeDataModule(BaseDataModule):
     def _download_pannuke(self, download_dir):
         """download PanNuke dataset"""
         for fold_ix in [1, 2, 3]:
-            p = os.path.join(download_dir, "Fold " + str(fold_ix))
+            p = os.path.join(download_dir, f"Fold {str(fold_ix)}")
             # don't download if the directory already exists
             if not os.path.isdir(p):
                 logger.info(f"Downloading fold {fold_ix}")
@@ -379,10 +375,7 @@ class PanNukeDataModule(BaseDataModule):
         Dataloader for validation set.
         Yields (image, mask, tissue_type), or (image, mask, hv, tissue_type) for HoVer-Net
         """
-        if self.split in [1, 3]:
-            fold_ix = 2
-        else:
-            fold_ix = 1
+        fold_ix = 2 if self.split in [1, 3] else 1
         return data.DataLoader(
             self._get_dataset(fold_ix=fold_ix, augment=False),
             batch_size=self.batch_size,
@@ -396,10 +389,7 @@ class PanNukeDataModule(BaseDataModule):
         Dataloader for test set.
         Yields (image, mask, tissue_type), or (image, mask, hv, tissue_type) for HoVer-Net
         """
-        if self.split in [1, 2]:
-            fold_ix = 3
-        else:
-            fold_ix = 1
+        fold_ix = 3 if self.split in [1, 2] else 1
         return data.DataLoader(
             self._get_dataset(fold_ix=fold_ix, augment=False),
             batch_size=self.batch_size,

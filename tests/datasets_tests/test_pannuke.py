@@ -176,7 +176,7 @@ def test_pannuke_datamodule(
             assert mask.shape == (batch_size, 256, 256)
 
         assert len(tissue_types) == batch_size and all(
-            [isinstance(t, str) for t in tissue_types]
+            isinstance(t, str) for t in tissue_types
         )
 
 

@@ -52,8 +52,7 @@ class Masks:
         del self._masks
 
     def __repr__(self):
-        rep = f"{len(self.h5manager.h5['masks'])} masks: {reprlib.repr(list(self.h5manager.h5['masks'].keys()))}"
-        return rep
+        return f"{len(self.h5manager.h5['masks'])} masks: {reprlib.repr(list(self.h5manager.h5['masks'].keys()))}"
 
     def __len__(self):
         return len(self.h5manager.h5["masks"].keys())
@@ -87,13 +86,12 @@ class Masks:
                     how the dimension should be sliced
         """
         if not (
-            isinstance(slicer, list) and all([isinstance(a, slice) for a in slicer])
+            isinstance(slicer, list) and all(isinstance(a, slice) for a in slicer)
         ):
             raise KeyError(
                 f"slices must of of type list[slice] but is {type(slicer)} with elements {type(slicer[0])}"
             )
-        sliced = {key: mask for key, mask in self.h5manager.slice_masks(slicer)}
-        return sliced
+        return dict(self.h5manager.slice_masks(slicer))
 
     def remove(self, key):
         """
